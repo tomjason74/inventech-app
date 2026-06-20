@@ -160,77 +160,119 @@
 
       <!-- VIEW: OVERVIEW -->
       <section id="view-overview" class="dashboard-view active">
-        <!-- KPI Row -->
-        <div class="card-grid">
-          <div class="glass-card">
-            <div class="card-kpi">
-              <div class="kpi-info">
-                <p>Total Hardware Assets</p>
-                <div class="kpi-value" id="kpi-total-assets">-</div>
+        
+        <!-- Admin Overview Content -->
+        <div id="admin-overview-content">
+          <!-- KPI Row -->
+          <div class="card-grid">
+            <div class="glass-card">
+              <div class="card-kpi">
+                <div class="kpi-info">
+                  <p>Total Hardware Assets</p>
+                  <div class="kpi-value" id="kpi-total-assets">-</div>
+                </div>
+                <div class="kpi-icon"><i class="fa-solid fa-laptop"></i></div>
               </div>
-              <div class="kpi-icon"><i class="fa-solid fa-laptop"></i></div>
-            </div>
-            <div class="kpi-trend trend-up">
-              <i class="fa-solid fa-arrow-trend-up"></i> <span>100% Tracking Rate</span>
-            </div>
-          </div>
-          
-          <div class="glass-card">
-            <div class="card-kpi">
-              <div class="kpi-info">
-                <p>Software License Seats</p>
-                <div class="kpi-value" id="kpi-license-seats">-</div>
+              <div class="kpi-trend trend-up">
+                <i class="fa-solid fa-arrow-trend-up"></i> <span>100% Tracking Rate</span>
               </div>
-              <div class="kpi-icon"><i class="fa-solid fa-key"></i></div>
             </div>
-            <div class="kpi-trend">
-              <span id="kpi-license-allocated">-</span> / <span id="kpi-license-total">-</span> seats allocated
+            
+            <div class="glass-card">
+              <div class="card-kpi">
+                <div class="kpi-info">
+                  <p>Software License Seats</p>
+                  <div class="kpi-value" id="kpi-license-seats">-</div>
+                </div>
+                <div class="kpi-icon"><i class="fa-solid fa-key"></i></div>
+              </div>
+              <div class="kpi-trend">
+                <span id="kpi-license-allocated">-</span> / <span id="kpi-license-total">-</span> seats allocated
+              </div>
+            </div>
+
+            <div class="glass-card">
+              <div class="card-kpi">
+                <div class="kpi-info">
+                  <p>Pending Approvals</p>
+                  <div class="kpi-value" id="kpi-pending-approvals">-</div>
+                </div>
+                <div class="kpi-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+              </div>
+              <div class="kpi-trend trend-down">
+                <i class="fa-solid fa-circle-notch fa-spin"></i> <span>Temporal workflow active</span>
+              </div>
+            </div>
+
+            <div class="glass-card">
+              <div class="card-kpi">
+                <div class="kpi-info">
+                  <p>Staff Time Saved</p>
+                  <div class="kpi-value">10 hr</div>
+                </div>
+                <div class="kpi-icon"><i class="fa-solid fa-clock"></i></div>
+              </div>
+              <div class="kpi-trend trend-up">
+                <i class="fa-solid fa-bolt"></i> <span>Zero Latency CDC Sync</span>
+              </div>
             </div>
           </div>
 
-          <div class="glass-card">
-            <div class="card-kpi">
-              <div class="kpi-info">
-                <p>Pending Approvals</p>
-                <div class="kpi-value" id="kpi-pending-approvals">-</div>
+          <div class="panel-grid">
+            <!-- Recent Workflows & Queue -->
+            <div class="glass-card">
+              <div class="panel-header">
+                <h3>Active Workflows (Temporal Orchestrator)</h3>
+                <span class="badge badge-active">Live state machine tracking</span>
               </div>
-              <div class="kpi-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+              <div class="table-container">
+                <table class="custom-table" id="table-workflows">
+                  <thead>
+                    <tr>
+                      <th>Workflow ID</th>
+                      <th>Item Requested</th>
+                      <th>Qty</th>
+                      <th>Total Cost</th>
+                      <th>Current State</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Filled by JS -->
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div class="kpi-trend trend-down">
-              <i class="fa-solid fa-circle-notch fa-spin"></i> <span>Temporal workflow active</span>
+
+            <!-- Quick Statistics -->
+            <div class="glass-card">
+              <div class="panel-header">
+                <h3>Sanitization Status</h3>
+              </div>
+              <div class="chart-container">
+                <canvas id="sanitizationChart"></canvas>
+              </div>
             </div>
           </div>
 
-          <div class="glass-card">
-            <div class="card-kpi">
-              <div class="kpi-info">
-                <p>Staff Time Saved</p>
-                <div class="kpi-value">10 hr</div>
-              </div>
-              <div class="kpi-icon"><i class="fa-solid fa-clock"></i></div>
-            </div>
-            <div class="kpi-trend trend-up">
-              <i class="fa-solid fa-bolt"></i> <span>Zero Latency CDC Sync</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="panel-grid">
-          <!-- Recent Workflows & Queue -->
-          <div class="glass-card">
+          <!-- Recent Checked Out Assets -->
+          <div class="panel-single glass-card">
             <div class="panel-header">
-              <h3>Active Workflows (Temporal Orchestrator)</h3>
-              <span class="badge badge-active">Live state machine tracking</span>
+              <h3>Active Hardware Assignments</h3>
+              <button class="btn btn-secondary" onclick="switchView('handoff')">
+                <i class="fa-solid fa-handshake"></i> Start Handoff Check-out
+              </button>
             </div>
             <div class="table-container">
-              <table class="custom-table" id="table-workflows">
+              <table class="custom-table" id="table-active-assignments">
                 <thead>
                   <tr>
-                    <th>Workflow ID</th>
-                    <th>Item Requested</th>
-                    <th>Qty</th>
-                    <th>Total Cost</th>
-                    <th>Current State</th>
+                    <th>Asset Tag</th>
+                    <th>Model</th>
+                    <th>Assigned User</th>
+                    <th>Email</th>
+                    <th>Check-out Date</th>
+                    <th>Signature Receipt (Hash)</th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -240,45 +282,115 @@
               </table>
             </div>
           </div>
+        </div>
 
-          <!-- Quick Statistics -->
-          <div class="glass-card">
+        <!-- Student Overview Content -->
+        <div id="student-overview-content" style="display:none;">
+          <!-- KPI Row for Students -->
+          <div class="card-grid">
+            <div class="glass-card">
+              <div class="card-kpi">
+                <div class="kpi-info">
+                  <p>My Checked Out Hardware</p>
+                  <div class="kpi-value" id="student-kpi-assets">0</div>
+                </div>
+                <div class="kpi-icon"><i class="fa-solid fa-laptop"></i></div>
+              </div>
+              <div class="kpi-trend trend-up">
+                <i class="fa-solid fa-shield-halved"></i> <span>Personally Assigned</span>
+              </div>
+            </div>
+            
+            <div class="glass-card">
+              <div class="card-kpi">
+                <div class="kpi-info">
+                  <p>My Software Licenses</p>
+                  <div class="kpi-value" id="student-kpi-licenses">0</div>
+                </div>
+                <div class="kpi-icon"><i class="fa-solid fa-key"></i></div>
+              </div>
+              <div class="kpi-trend trend-up">
+                <i class="fa-solid fa-circle-check"></i> <span>Active Seats</span>
+              </div>
+            </div>
+
+            <div class="glass-card">
+              <div class="card-kpi">
+                <div class="kpi-info">
+                  <p>Compliance Status</p>
+                  <div class="kpi-value">Verified</div>
+                </div>
+                <div class="kpi-icon"><i class="fa-solid fa-file-shield"></i></div>
+              </div>
+              <div class="kpi-trend trend-up">
+                <i class="fa-solid fa-check"></i> <span>NIST 800-88 Compliant</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <!-- Student Assigned Assets -->
+            <div class="glass-card">
+              <div class="panel-header">
+                <h3>My Assigned Hardware Assets</h3>
+              </div>
+              <div class="table-container">
+                <table class="custom-table" id="student-table-assets">
+                  <thead>
+                    <tr>
+                      <th>Asset Tag</th>
+                      <th>Model</th>
+                      <th>Serial Number</th>
+                      <th>Checkout Date</th>
+                      <th>Security Receipt (Hash)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Filled by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Student Assigned Licenses -->
+            <div class="glass-card">
+              <div class="panel-header">
+                <h3>My Software Licenses</h3>
+              </div>
+              <div class="table-container">
+                <table class="custom-table" id="student-table-licenses">
+                  <thead>
+                    <tr>
+                      <th>License Name</th>
+                      <th>License Key</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Filled by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Accountability Policy Panel -->
+          <div class="panel-single glass-card" style="margin-top: 1.5rem;">
             <div class="panel-header">
-              <h3>Sanitization Status</h3>
+              <h3>Digital Handoff & Security Accountability Policy</h3>
             </div>
-            <div class="chart-container">
-              <canvas id="sanitizationChart"></canvas>
+            <div style="padding: 1rem 0; display:flex; flex-direction:column; gap:0.75rem; font-size:0.95rem; line-height:1.6;">
+              <p>As a student of CCT College, you are personally responsible for the custody and safe handling of all IT hardware and software licenses assigned to you. By signing the digital handover signature pad upon checkout, you agree to the following conditions:</p>
+              <ul style="margin-left: 2rem; display:flex; flex-direction:column; gap:0.5rem;">
+                <li><strong>Equipment Security:</strong> You must not leave physical equipment unattended in public SCS labs or classrooms.</li>
+                <li><strong>Software Licensing:</strong> Assigned license keys are for academic work on verified CCT assets only. Shared use or relocation of keys is strictly prohibited.</li>
+                <li><strong>Decommission & Sanitization:</strong> Upon course graduation or status change, all assigned hardware must be checked back in. Assets will undergo standard NIST 800-88 data sanitization to scrub personal data.</li>
+                <li><strong>Cryptographic Verification:</strong> Checkouts generate an immutable SHA256 receipt hash, establishing an audit trail in the PostgreSQL relational system.</li>
+              </ul>
             </div>
           </div>
         </div>
 
-        <!-- Recent Checked Out Assets -->
-        <div class="panel-single glass-card">
-          <div class="panel-header">
-            <h3>Active Hardware Assignments</h3>
-            <button class="btn btn-secondary" onclick="switchView('handoff')">
-              <i class="fa-solid fa-handshake"></i> Start Handoff Check-out
-            </button>
-          </div>
-          <div class="table-container">
-            <table class="custom-table" id="table-active-assignments">
-              <thead>
-                <tr>
-                  <th>Asset Tag</th>
-                  <th>Model</th>
-                  <th>Assigned User</th>
-                  <th>Email</th>
-                  <th>Check-out Date</th>
-                  <th>Signature Receipt (Hash)</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                <!-- Filled by JS -->
-              </tbody>
-            </table>
-          </div>
-        </div>
       </section>
 
       <!-- VIEW: REGISTRY -->

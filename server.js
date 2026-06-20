@@ -45,6 +45,23 @@ function addLog(db, type, message) {
   }
 }
 
+// Helper to check if request is from an admin user (faculty)
+function isAdmin(req, res, next) {
+  const userId = req.headers['x-user-id'] || req.query.user_id || (req.body && req.body.requester_id);
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized. User ID is required." });
+  }
+  const db = readDB();
+  const user = db.users.find(u => u.id === userId);
+  if (!user) {
+    return res.status(401).json({ error: "Unauthorized. User not found in system." });
+  }
+  if (!userId.startsWith('FAC-')) {
+    return res.status(403).json({ error: "Forbidden. Administrative access required." });
+  }
+  next();
+}
+
 // API: Login
 app.post('/api/login', (req, res) => {
   const { username } = req.body;
@@ -60,7 +77,7 @@ app.post('/api/login', (req, res) => {
 });
 
 // API: Reset demo data
-app.post('/api/reset', (req, res) => {
+app.post('/api/reset', isAdmin, (req, res) => {
   try {
     const seedData = fs.readFileSync(SEED_FILE, 'utf8');
     fs.writeFileSync(DB_FILE, seedData, 'utf8');
@@ -73,7 +90,35 @@ app.post('/api/reset', (req, res) => {
 
 // API: Get entire database state
 app.get('/api/data', (req, res) => {
-  res.json(readDB());
+  const userId = req.headers['x-user-id'];
+  const db = readDB();
+  if (userId && userId.startsWith('STU-')) {
+    // Filter data for student
+    const filteredAssets = db.assets.filter(a => a.assigned_to === userId);
+    const filteredLicenses = db.licenses.map(lic => {
+      if (lic.assigned_users && lic.assigned_users.includes(userId)) {
+        return {
+          id: lic.id,
+          name: lic.name,
+          key: "XXXX-XXXX-XXXX-XXXX-MASKED",
+          total_seats: lic.total_seats,
+          seats_assigned: lic.seats_assigned,
+          assigned_users: [userId]
+        };
+      }
+      return null;
+    }).filter(Boolean);
+
+    return res.json({
+      users: db.users.filter(u => u.id === userId),
+      assets: filteredAssets,
+      licenses: filteredLicenses,
+      maintenance: db.maintenance.filter(m => filteredAssets.some(a => a.asset_tag === m.asset_tag)),
+      workflows: [],
+      simulation_logs: []
+    });
+  }
+  res.json(db);
 });
 
 // API: Get assets
@@ -83,7 +128,7 @@ app.get('/api/assets', (req, res) => {
 });
 
 // API: Register a new physical asset (PostgreSQL RDBMS simulator)
-app.post('/api/assets', (req, res) => {
+app.post('/api/assets', isAdmin, (req, res) => {
   const { asset_tag, serial, model, type, location } = req.body;
 
   if (!asset_tag || !serial || !model || !type || !location) {
@@ -156,7 +201,7 @@ app.get('/api/disposals', (req, res) => {
 });
 
 // API: Retire an asset (Orphan Prevention Check)
-app.post('/api/assets/:id/retire', (req, res) => {
+app.post('/api/assets/:id/retire', isAdmin, (req, res) => {
   const { id } = req.params;
   
   const db = readDB();
@@ -182,7 +227,7 @@ app.post('/api/assets/:id/retire', (req, res) => {
 });
 
 // API: Finalize Disposal & Generate Certificate
-app.post('/api/assets/:id/dispose', (req, res) => {
+app.post('/api/assets/:id/dispose', isAdmin, (req, res) => {
   const { id } = req.params;
   const { compliance_officer, signature_data } = req.body;
 
@@ -245,7 +290,7 @@ app.post('/api/assets/:id/dispose', (req, res) => {
 });
 
 // API: Check out asset with Digital Signature
-app.post('/api/assets/:id/checkout', (req, res) => {
+app.post('/api/assets/:id/checkout', isAdmin, (req, res) => {
   const { id } = req.params;
   const { user_id, signature_data } = req.body;
   
@@ -295,7 +340,7 @@ app.post('/api/assets/:id/checkout', (req, res) => {
 });
 
 // API: Check in asset
-app.post('/api/assets/:id/checkin', (req, res) => {
+app.post('/api/assets/:id/checkin', isAdmin, (req, res) => {
   const { id } = req.params;
   
   const db = readDB();
@@ -325,7 +370,7 @@ app.post('/api/assets/:id/checkin', (req, res) => {
 });
 
 // API: Sanitize asset (Disposal/Clear checklist)
-app.post('/api/assets/:id/sanitize', (req, res) => {
+app.post('/api/assets/:id/sanitize', isAdmin, (req, res) => {
   const { id } = req.params;
   const { method, status } = req.body; // e.g. "NIST 800-88 Clear", "Verified"
 
@@ -350,7 +395,7 @@ app.post('/api/assets/:id/sanitize', (req, res) => {
 });
 
 // API: Create new maintenance log (MongoDB document store simulator)
-app.post('/api/maintenance', (req, res) => {
+app.post('/api/maintenance', isAdmin, (req, res) => {
   const { asset_tag, issue_type, technician_notes } = req.body;
 
   if (!asset_tag || !issue_type || !technician_notes) {
@@ -386,7 +431,7 @@ app.post('/api/maintenance', (req, res) => {
 });
 
 // API: Resolve maintenance log
-app.post('/api/maintenance/:id/resolve', (req, res) => {
+app.post('/api/maintenance/:id/resolve', isAdmin, (req, res) => {
   const { id } = req.params;
   const { notes } = req.body;
 
@@ -416,7 +461,7 @@ app.post('/api/maintenance/:id/resolve', (req, res) => {
 });
 
 // API: Start Procurement Approval Workflow (Temporal state machine simulator)
-app.post('/api/workflows', (req, res) => {
+app.post('/api/workflows', isAdmin, (req, res) => {
   const { item_name, quantity, cost, requested_by } = req.body;
 
   if (!item_name || !quantity || !cost || !requested_by) {
@@ -445,7 +490,7 @@ app.post('/api/workflows', (req, res) => {
 });
 
 // API: Workflow Action (Approve / Transition)
-app.post('/api/workflows/:id/approve', (req, res) => {
+app.post('/api/workflows/:id/approve', isAdmin, (req, res) => {
   const { id } = req.params;
   const { approved } = req.body; // true or false
 
@@ -512,7 +557,7 @@ app.post('/api/workflows/:id/approve', (req, res) => {
 });
 
 // SIMULATION API: HRIS Status Change and CDC/Kafka license auto-reclamation
-app.post('/api/simulation/hris-sync', (req, res) => {
+app.post('/api/simulation/hris-sync', isAdmin, (req, res) => {
   const { user_id, new_status } = req.body; // Status: e.g. "Graduated" or "Inactive" / "Terminated"
 
   if (!user_id || !new_status) {
@@ -579,7 +624,7 @@ app.post('/api/simulation/hris-sync', (req, res) => {
 });
 
 // SIMULATION API: AI Diagnostics & Predictive Maintenance (AWS SageMaker mockup)
-app.post('/api/simulation/predictive-maintenance', (req, res) => {
+app.post('/api/simulation/predictive-maintenance', isAdmin, (req, res) => {
   const db = readDB();
   addLog(db, "SageMaker ML", "Started batch inference job on device telemetry data...");
 

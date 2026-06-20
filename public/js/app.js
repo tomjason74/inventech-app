@@ -84,6 +84,23 @@ async function handleLogin(e) {
 function handleLogout() {
   sessionStorage.removeItem('inventech_user');
   currentUser = null;
+  // Restore all sidebar displays
+  const navRegistry = document.querySelector('.nav-item[data-view="registry"]');
+  const navHandoff = document.querySelector('.nav-item[data-view="handoff"]');
+  const navIntegrations = document.querySelector('.nav-item[data-view="integrations"]');
+  const navDiagnostics = document.querySelector('.nav-item[data-view="diagnostics"]');
+  const navDisposal = document.querySelector('.nav-item[data-view="disposal"]');
+  const btnReset = document.querySelector('.btn-reset');
+  const btnProcure = document.querySelector('.header-actions button[onclick="openNewWorkflowModal()"]');
+
+  if (navRegistry) navRegistry.parentElement.style.display = 'block';
+  if (navHandoff) navHandoff.parentElement.style.display = 'block';
+  if (navIntegrations) navIntegrations.parentElement.style.display = 'block';
+  if (navDiagnostics) navDiagnostics.parentElement.style.display = 'block';
+  if (navDisposal) navDisposal.parentElement.style.display = 'block';
+  if (btnReset) btnReset.style.display = 'block';
+  if (btnProcure) btnProcure.style.display = 'block';
+
   // Show login overlay
   document.getElementById('login-overlay').classList.remove('hidden');
   document.getElementById('app-container').style.display = 'none';
@@ -98,6 +115,43 @@ function showAppAfterLogin() {
 
   // Update user profile in header
   updateUserProfile();
+
+  // Show/hide sidebar links and header actions based on role
+  const isStudent = currentUser.id.startsWith('STU-');
+  const navRegistry = document.querySelector('.nav-item[data-view="registry"]');
+  const navHandoff = document.querySelector('.nav-item[data-view="handoff"]');
+  const navIntegrations = document.querySelector('.nav-item[data-view="integrations"]');
+  const navDiagnostics = document.querySelector('.nav-item[data-view="diagnostics"]');
+  const navDisposal = document.querySelector('.nav-item[data-view="disposal"]');
+  const btnReset = document.querySelector('.btn-reset');
+  const btnProcure = document.querySelector('.header-actions button[onclick="openNewWorkflowModal()"]');
+
+  if (isStudent) {
+    if (navRegistry) navRegistry.parentElement.style.display = 'none';
+    if (navHandoff) navHandoff.parentElement.style.display = 'none';
+    if (navIntegrations) navIntegrations.parentElement.style.display = 'none';
+    if (navDiagnostics) navDiagnostics.parentElement.style.display = 'none';
+    if (navDisposal) navDisposal.parentElement.style.display = 'none';
+    if (btnReset) btnReset.style.display = 'none';
+    if (btnProcure) btnProcure.style.display = 'none';
+
+    document.getElementById('admin-overview-content').style.display = 'none';
+    document.getElementById('student-overview-content').style.display = 'block';
+    
+    // Default student view is overview
+    switchView('overview');
+  } else {
+    if (navRegistry) navRegistry.parentElement.style.display = 'block';
+    if (navHandoff) navHandoff.parentElement.style.display = 'block';
+    if (navIntegrations) navIntegrations.parentElement.style.display = 'block';
+    if (navDiagnostics) navDiagnostics.parentElement.style.display = 'block';
+    if (navDisposal) navDisposal.parentElement.style.display = 'block';
+    if (btnReset) btnReset.style.display = 'block';
+    if (btnProcure) btnProcure.style.display = 'block';
+
+    document.getElementById('admin-overview-content').style.display = 'block';
+    document.getElementById('student-overview-content').style.display = 'none';
+  }
 
   // Load data then show app
   fetchState().then(() => {
@@ -137,7 +191,10 @@ async function resetDemoData() {
   }
 
   try {
-    const response = await fetch('/api/reset', { method: 'POST' });
+    const response = await fetch('/api/reset', {
+      method: 'POST',
+      headers: { 'x-user-id': currentUser ? currentUser.id : '' }
+    });
     if (response.ok) {
       showToast('success', 'Data Reset', 'Database has been restored to original demo data.');
       await refreshData();
@@ -243,7 +300,11 @@ async function refreshDataSilent() {
 
 async function fetchState() {
   try {
-    const response = await fetch('/api/data');
+    const headers = {};
+    if (currentUser) {
+      headers['x-user-id'] = currentUser.id;
+    }
+    const response = await fetch('/api/data', { headers });
     if (response.ok) {
       state = await response.json();
     }
@@ -264,6 +325,7 @@ function renderAll() {
   renderSanitizationChart();
   renderTelemetryChart();
   renderDisposalView();
+  renderStudentDashboard();
 }
 
 // Light Render (preserves form states and selections)
@@ -277,6 +339,7 @@ function renderAllSilent() {
   updateIntegrationUsersSilent();
   updateDiagnosticsTable();
   renderDisposalViewSilent();
+  renderStudentDashboard();
 }
 
 // Render KPI Cards
@@ -855,7 +918,10 @@ async function handleCheckoutSubmit(e) {
   try {
     const response = await fetch(`/api/assets/${assetId}/checkout`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-user-id': currentUser ? currentUser.id : ''
+      },
       body: JSON.stringify({ user_id: userId, signature_data: sigDataUrl })
     });
 
@@ -894,7 +960,8 @@ async function checkinAsset(assetId) {
 
   try {
     const response = await fetch(`/api/assets/${assetId}/checkin`, {
-      method: 'POST'
+      method: 'POST',
+      headers: { 'x-user-id': currentUser ? currentUser.id : '' }
     });
 
     if (response.ok) {
@@ -931,7 +998,10 @@ async function handleModalSanitizeSubmit(e) {
   try {
     const response = await fetch(`/api/assets/${assetId}/sanitize`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-user-id': currentUser ? currentUser.id : ''
+      },
       body: JSON.stringify({ method: method, status: "Verified" })
     });
 
@@ -953,7 +1023,10 @@ async function approveWorkflow(id, isApproved) {
   try {
     const response = await fetch(`/api/workflows/${id}/approve`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-user-id': currentUser ? currentUser.id : ''
+      },
       body: JSON.stringify({ approved: isApproved })
     });
 
@@ -984,7 +1057,10 @@ async function handleHrisSubmit(e) {
   try {
     const response = await fetch('/api/simulation/hris-sync', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-user-id': currentUser ? currentUser.id : ''
+      },
       body: JSON.stringify({ user_id: userId, new_status: status })
     });
 
@@ -1010,7 +1086,10 @@ async function handleProcurementSubmit(e) {
   try {
     const response = await fetch('/api/workflows', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-user-id': currentUser ? currentUser.id : ''
+      },
       body: JSON.stringify({ item_name: item, quantity: qty, cost: cost, requested_by: "Procurement Simulator" })
     });
 
@@ -1031,7 +1110,8 @@ async function handleProcurementSubmit(e) {
 async function runMlInference() {
   try {
     const response = await fetch('/api/simulation/predictive-maintenance', {
-      method: 'POST'
+      method: 'POST',
+      headers: { 'x-user-id': currentUser ? currentUser.id : '' }
     });
 
     const result = await response.json();
@@ -1063,7 +1143,10 @@ async function handleModalProcurementSubmit(e) {
   try {
     const response = await fetch('/api/workflows', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-user-id': currentUser ? currentUser.id : ''
+      },
       body: JSON.stringify({ item_name: item, quantity: qty, cost: cost, requested_by: by })
     });
 
@@ -1104,7 +1187,10 @@ async function handleModalAssetSubmit(e) {
   try {
     const response = await fetch('/api/assets', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-user-id': currentUser ? currentUser.id : ''
+      },
       body: JSON.stringify({ asset_tag: tag, serial, model, type, location: loc })
     });
 
@@ -1222,7 +1308,8 @@ async function retireAsset(id) {
 
   try {
     const response = await fetch(`/api/assets/${id}/retire`, {
-      method: 'POST'
+      method: 'POST',
+      headers: { 'x-user-id': currentUser ? currentUser.id : '' }
     });
 
     if (response.ok) {
@@ -1348,7 +1435,10 @@ async function handleModalDisposeSubmit(e) {
   try {
     const response = await fetch(`/api/assets/${assetId}/dispose`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-user-id': currentUser ? currentUser.id : ''
+      },
       body: JSON.stringify({ compliance_officer: officer, signature_data: sigDataUrl })
     });
 
@@ -1394,5 +1484,61 @@ function showCertificate(dispRecordId) {
 
 function closeCertificateModal() {
   document.getElementById('modal-certificate').classList.remove('active');
+}
+
+// Render student dashboard information (KPIs and custom tables)
+function renderStudentDashboard() {
+  if (!currentUser) return;
+  const isStudent = currentUser.id.startsWith('STU-');
+  if (!isStudent) return;
+
+  // KPIs
+  const myAssets = state.assets.filter(a => a.assigned_to === currentUser.id);
+  const myLicenses = state.licenses.filter(lic => lic.assigned_users && lic.assigned_users.includes(currentUser.id));
+  
+  const kpiAssetsEl = document.getElementById('student-kpi-assets');
+  const kpiLicensesEl = document.getElementById('student-kpi-licenses');
+  if (kpiAssetsEl) kpiAssetsEl.textContent = myAssets.length;
+  if (kpiLicensesEl) kpiLicensesEl.textContent = myLicenses.length;
+
+  // Assets Table
+  const assetTbody = document.querySelector('#student-table-assets tbody');
+  if (assetTbody) {
+    assetTbody.innerHTML = '';
+    if (myAssets.length === 0) {
+      assetTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No hardware assets currently assigned to you</td></tr>`;
+    } else {
+      myAssets.forEach(a => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${a.asset_tag}</strong></td>
+          <td>${a.model}</td>
+          <td>${a.serial}</td>
+          <td>${a.date_checked_out || '-'}</td>
+          <td><code style="font-size:0.75rem; color:var(--secondary);">${a.signature_hash ? a.signature_hash.substring(0, 24) + '...' : '-'}</code></td>
+        `;
+        assetTbody.appendChild(tr);
+      });
+    }
+  }
+
+  // Licenses Table
+  const licenseTbody = document.querySelector('#student-table-licenses tbody');
+  if (licenseTbody) {
+    licenseTbody.innerHTML = '';
+    if (myLicenses.length === 0) {
+      licenseTbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">No software licenses currently assigned to you</td></tr>`;
+    } else {
+      myLicenses.forEach(lic => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${lic.name}</strong></td>
+          <td><code style="font-size:0.8rem; color:var(--text-muted);">${lic.key}</code></td>
+          <td><span class="badge badge-verified"><i class="fa-solid fa-check"></i> Active Seat</span></td>
+        `;
+        licenseTbody.appendChild(tr);
+      });
+    }
+  }
 }
 
